@@ -1,0 +1,55 @@
+---
+version: "3.8"
+services:
+  rabbitmq:
+    image: rabbitmq:3.8.9-management
+    container_name: rabbitmq
+    ports:
+      - "15671:15671"
+      - "15672:15672"
+      - "5671:5671"
+      - "5672:5672"
+      - "25672:25672"
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq.conf:ro
+    # - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+  producer:
+    image: producer:latest
+    container_name: producder
+    network_mode: host
+    ports:
+      - "3333:3333"
+    # links:
+    #   - rabbitmq
+    depends_on:
+      - rabbitmq
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel
+    links:
+      - prometheus
+    command:
+      - "/otelcontribcol"
+      - "--config=/etc/otel/config.yaml"
+      - "--mem-ballast-size-mib=683"
+    ports:
+      - "55680:55680"
+      - "55679:55679"
+      - "13133:13133"
+      - "8888:8888"
+    volumes:
+      - ./otel/otel_collector_config.yaml:/etc/otel/config.yaml:ro
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    # - rabbitmq
+    # depends_on:
+    # - otel
+    volumes:
+    - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
+
+
+# docker run -p 9090:9090 -v prometheus.yaml:/etc/prometheus/prometheus.yaml prom/prometheus
+# docker run -p 9090:9090 -v prometheus.yaml:/etc/prometheus/prometheus.yaml prom/prometheus

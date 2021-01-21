@@ -1,0 +1,18 @@
+{
+  "users": [
+    {
+      "name": "user",
+      "password": "rushrush",
+      "tags": "management"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "user",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ]
+}
