@@ -13,21 +13,9 @@ services:
     volumes:
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq.conf:ro
     # - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
-  producer:
-    image: producer:latest
-    container_name: producder
-    network_mode: host
-    ports:
-      - "3333:3333"
-    # links:
-    #   - rabbitmq
-    depends_on:
-      - rabbitmq
   otel:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel
-    links:
-      - prometheus
     command:
       - "/otelcontribcol"
       - "--config=/etc/otel/config.yaml"
@@ -43,13 +31,16 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "9090:9090"
-    # - rabbitmq
-    # depends_on:
-    # - otel
+      - "19090:9090"
     volumes:
     - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
-
-
-# docker run -p 9090:9090 -v prometheus.yaml:/etc/prometheus/prometheus.yaml prom/prometheus
-# docker run -p 9090:9090 -v prometheus.yaml:/etc/prometheus/prometheus.yaml prom/prometheus
+  # producer:
+  #   image: producer:latest
+  #   container_name: producder
+  #   network_mode: host
+  #   ports:
+  #     - "3333:3333"
+  #   # links:
+  #   #   - rabbitmq
+  #   depends_on:
+  #     - rabbitmq
