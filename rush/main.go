@@ -119,6 +119,36 @@ func main() {
 
 func setupRoutes() {
 	http.HandleFunc("/blue", blue)
+	http.HandleFunc("/green", green)
+}
+
+func green(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	ctx = baggage.ContextWithValues(ctx,
+		label.String("producer", "green"),
+	)
+	tracer := otel.Tracer("rush")
+	meter := otel.Meter("rush")
+	var span trace.Span
+	ctx, span = tracer.Start(ctx, "sending msg")
+	span.SetAttributes(label.String("type", "green"))
+	defer span.End()
+
+	valueRecorder := metric.Must(meter).NewFloat64ValueRecorder("sendingGreen")
+
+	meter.RecordBatch(
+		// Note: call-site variables added as context Entries:
+		baggage.ContextWithValues(ctx, label.String("colour", "green")),
+		[]label.KeyValue{label.String("green", "labels")},
+		valueRecorder.Measurement(11.0),
+	)
+
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	publishMessage(ctx, "green", string(reqBody), ch)
 }
 
 func blue(w http.ResponseWriter, r *http.Request) {
@@ -171,7 +201,7 @@ func publishMessage(ctx context.Context, routingKey string, body string, ch *amq
 		false,      // mandatory
 		false,      // immediate
 		amqp.Publishing{
-			// Headers:       otel. .InjectContext(ctx, make(amqp.Table)),
+			Headers:       injectContext(ctx, make(amqp.Table)),
 			CorrelationId: "abc",
 			ContentType:   "text/plain",
 			Body:          []byte(body),
@@ -179,4 +209,35 @@ func publishMessage(ctx context.Context, routingKey string, body string, ch *amq
 	failOnError(err, "Failed to publish a message")
 
 	log.Printf("Sent Message: %s", body)
+}
+
+// injects tracing context into headers.
+func injectContext(ctx context.Context, headers map[string]interface{}) map[string]interface{} {
+	otel.GetTextMapPropagator().Inject(ctx, &headerSupplier{
+		headers: headers,
+	})
+
+	return headers
+}
+
+type headerSupplier struct {
+	headers map[string]interface{}
+}
+
+func (s *headerSupplier) Get(key string) string {
+	value, ok := s.headers[key]
+	if !ok {
+		return ""
+	}
+
+	str, ok := value.(string)
+	if !ok {
+		return ""
+	}
+
+	return str
+}
+
+func (s *headerSupplier) Set(key string, value string) {
+	s.headers[key] = value
 }
