@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -75,15 +76,15 @@ func main() {
 	propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
 	otel.SetTextMapPropagator(propagator)
 
-	lemonsKey := label.Key("lemons")
-	commonLabels := []label.KeyValue{lemonsKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
+	labelKey := label.Key("prom_metrics")
+	commonLabels := []label.KeyValue{labelKey.Int(10), label.String("A", "1"), label.String("B", "2"), label.String("C", "3")}
 
 	meter := otel.Meter("rush")
 	observerCallback := func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(3, commonLabels...)
+		result.Observe(float64(rand.Intn(71)), commonLabels...)
 	}
 	_ = metric.Must(meter).NewFloat64ValueObserver("observableValue", observerCallback,
-		metric.WithDescription("A ValueObserver set to 3.0"),
+		metric.WithDescription("A ValueObserver set"),
 	)
 
 	////////////// Rabbit Setup //////////////////////////////////////////
@@ -140,7 +141,7 @@ func green(w http.ResponseWriter, r *http.Request) {
 		// Note: call-site variables added as context Entries:
 		baggage.ContextWithValues(ctx, label.String("colour", "green")),
 		[]label.KeyValue{label.String("green", "labels")},
-		valueRecorder.Measurement(11.0),
+		valueRecorder.Measurement(float64(rand.Intn(9))),
 	)
 
 	reqBody, err := ioutil.ReadAll(r.Body)
@@ -168,8 +169,8 @@ func blue(w http.ResponseWriter, r *http.Request) {
 	meter.RecordBatch(
 		// Note: call-site variables added as context Entries:
 		baggage.ContextWithValues(ctx, label.String("colour", "blue")),
-		[]label.KeyValue{label.String("more", "labels")},
-		valueRecorder.Measurement(7.0),
+		[]label.KeyValue{label.String("blue", "labels")},
+		valueRecorder.Measurement(float64(rand.Intn(3))),
 	)
 
 	reqBody, err := ioutil.ReadAll(r.Body)
@@ -193,7 +194,7 @@ func publishMessage(ctx context.Context, routingKey string, body string, ch *amq
 	valueRecorder := metric.Must(meter).NewFloat64ValueRecorder("bunnyblue")
 	boundRecorder := valueRecorder.Bind(label.String("bound", "recorder"))
 	defer boundRecorder.Unbind()
-	boundRecorder.Record(ctx, 7.3)
+	boundRecorder.Record(ctx, float64(rand.Intn(20)))
 
 	err := ch.Publish(
 		"colours",  // exchange
@@ -216,7 +217,7 @@ func injectContext(ctx context.Context, headers map[string]interface{}) map[stri
 	otel.GetTextMapPropagator().Inject(ctx, &headerSupplier{
 		headers: headers,
 	})
-
+	log.Printf("Headers: %s", headers)
 	return headers
 }
 

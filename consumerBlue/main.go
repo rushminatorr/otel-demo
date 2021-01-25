@@ -44,7 +44,7 @@ func main() {
 	propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
 	otel.SetTextMapPropagator(propagator)
 
-	//////////////////// Rabbit Setup /////////////////////////
+	//////////////////////////////////// Rabbit Setup /////////////////////////////////////////
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -83,7 +83,7 @@ func main() {
 		nil)
 	failOnError(err, "Failed to bind a queue")
 
-	/////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////
 
 	msgs, err := ch.Consume(
 		q.Name, // queue
@@ -96,20 +96,56 @@ func main() {
 	)
 	failOnError(err, "Failed to register a consumer")
 
-	forever := make(chan bool)
+	tracer := otel.Tracer("consumerBlue")
+	var span trace.Span
 
+	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
-			tracer := otel.Tracer("consumerBlue")
-			var span trace.Span
+			ctx = contextFromRemote(ctx, d.Headers)
 			ctx, span = tracer.Start(ctx, "inBlue")
-			span.SetAttributes(label.String("message", string(d.Body)))
-			defer span.End()
+			span.SetAttributes(label.String("inBlue", string(d.Body)))
 
 			log.Printf("Message Received: %s", d.Body)
+			span.End()
 		}
 	}()
 
 	log.Printf("Waiting for messages. To exit press CTRL+C")
 	<-forever
 }
+
+// extracts a remote Context from provided headers.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func contextFromRemote(ctx context.Context, headers map[string]interface{}) context.Context {
+	otel.GetTextMapPropagator().Extract(ctx, &headerSupplier{
+		headers: headers,
+	})
+	spanContext := trace.RemoteSpanContextFromContext(ctx)
+	log.Printf("Remote Span: %s", spanContext.TraceID)
+	return trace.ContextWithRemoteSpanContext(ctx, spanContext)
+}
+
+type headerSupplier struct {
+	headers map[string]interface{}
+}
+
+func (s *headerSupplier) Get(key string) string {
+	value, ok := s.headers[key]
+	if !ok {
+		return ""
+	}
+
+	str, ok := value.(string)
+	if !ok {
+		return ""
+	}
+
+	return str
+}
+
+func (s *headerSupplier) Set(key string, value string) {
+	s.headers[key] = value
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

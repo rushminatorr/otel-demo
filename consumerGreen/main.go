@@ -74,7 +74,7 @@ func main() {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	log.Printf("Binding queue %s to exchange %s with routing key blue", q.Name, "colours")
+	log.Printf("Binding queue %s to exchange %s with routing key green", q.Name, "colours")
 	err = ch.QueueBind(
 		q.Name,    // queue name
 		"green",   // routing key
@@ -96,17 +96,19 @@ func main() {
 	)
 	failOnError(err, "Failed to register a consumer")
 
+	tracer := otel.Tracer("green")
+	var span trace.Span
+
 	forever := make(chan bool)
 
 	go func() {
 		for d := range msgs {
-			tracer := otel.Tracer("consumerGreen")
-			var span trace.Span
-			ctx, span = tracer.Start(ctx, "inGreen")
-			span.SetAttributes(label.String("message", string(d.Body)))
-			defer span.End()
+			ctx, span = tracer.Start(ctx, "inGreen", trace.WithAttributes(
+				label.String("Green", "Grass")))
+			span.AddEvent("green message", trace.WithAttributes(label.String("message", string(d.Body))))
 
 			log.Printf("Message Received: %s", d.Body)
+			span.End()
 		}
 	}()
 

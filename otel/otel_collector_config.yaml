@@ -13,41 +13,41 @@ processors:
     # 25% of limit up to 2G
     spike_limit_mib: 512
     check_interval: 5s
-  queued_retry:
 extensions:
   health_check: {}
   zpages: 
-    endpoint: "localhost:55679"
+    endpoint: :55679
 exporters:
   honeycomb:
     api_key: ""
     dataset: "rush"
-    # api_url: "https://api.testhost.io"
     sample_rate: 25
     sample_rate_attribute: "hny.sample_rate"
     debug: true
+  newrelic:
+    apikey: 
+    timeout: 30s
+    common_attributes:
+      server: rush
+      ready_to_rock: true
+      volume: 11
   logging:
     loglevel: debug
     sampling_initial: 5
     sampling_thereafter: 5
   prometheus:
-    endpoint: "prometheus:9090"
+    endpoint: "0.0.0.0:8889"
     namespace: "default"
     const_labels:
       env: rush-dev
-    send_timestamps: true
 service:
   extensions: [health_check, zpages]
   pipelines:
     traces/1:
       receivers: [otlp]
-      processors: [memory_limiter, batch, queued_retry]
-      exporters: [honeycomb]
-    traces/2:
-      receivers: [otlp]
-      processors: [memory_limiter, batch, queued_retry]
-      exporters: [logging]
+      processors: [batch]
+      exporters: [honeycomb, logging]
     metrics/1:
-         receivers: [otlp]
-         processors: [memory_limiter, batch, queued_retry]
-         exporters: [prometheus, logging]
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]

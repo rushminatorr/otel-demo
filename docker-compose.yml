@@ -23,17 +23,19 @@ services:
     ports:
       - "55680:55680"
       - "55679:55679"
+      - "55678:55678"
       - "13133:13133"
       - "8888:8888"
+      - "8889:8889"
     volumes:
       - ./otel/otel_collector_config.yaml:/etc/otel/config.yaml:ro
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "19090:9090"
+      - "9090:9090"
     volumes:
-    - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
+    - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
   # producer:
   #   image: producer:latest
   #   container_name: producder
