@@ -9,15 +9,22 @@ A quick demo on using OpenTelemetry for Tracing and Metrics for your application
 
   ![Demo](otel-demo.png)
 
+  Helpful Commands: 
+  - docker-compose up
+  - docker-compose down
+  - go run main.go 
+
   Sending messages: 
   - curl -si -X POST -d "message here" http://localhost:3333/blue
   - curl -si -X POST -d "message here" http://localhost:3333/green
 
-
 ## RabbitMQ
-Messaging queue running at: http://localhost:15672
+Messaging queue running at: 
+
+    http://localhost:15672
 
 ## Otel
+Opentelemetry Collector to capture telemetry data and export it to your choice of backend.
 
 ### zpages
  An extention helpful in debugging and troubleshooting.
@@ -34,8 +41,9 @@ Check Otel health
     http://localhost:13133
 
 ## Prometheus
-Prometheus running on 9090 and scraping metrics from Otel.
-http://localhost:9090
+Prometheus running on `9090` and scraping metrics from Otel.
+    
+    http://localhost:9090
 
 ## Useful Resources
 
@@ -44,6 +52,3 @@ http://localhost:9090
 - Github: https://github.com/open-telemetry
 - Microsoft-Engineering-Playbook: https://github.com/microsoft/code-with-engineering-playbook
 - Gremlin Blog: https://www.gremlin.com/blog/knowing-your-systems-and-how-they-can-fail-twilio-and-aws-talk-at-chaos-conf-2020/
-
-
-

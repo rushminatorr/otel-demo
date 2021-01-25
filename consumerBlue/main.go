@@ -102,6 +102,7 @@ func main() {
 	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
+			log.Printf("headers Received: %s", d.Headers)
 			ctx = contextFromRemote(ctx, d.Headers)
 			ctx, span = tracer.Start(ctx, "inBlue")
 			span.SetAttributes(label.String("inBlue", string(d.Body)))
@@ -121,8 +122,10 @@ func contextFromRemote(ctx context.Context, headers map[string]interface{}) cont
 	otel.GetTextMapPropagator().Extract(ctx, &headerSupplier{
 		headers: headers,
 	})
-	spanContext := trace.RemoteSpanContextFromContext(ctx)
-	log.Printf("Remote Span: %s", spanContext.TraceID)
+	spanContext := trace.RemoteSpanContextFromContext(
+		otel.GetTextMapPropagator().Extract(ctx, &headerSupplier{
+			headers: headers,
+		}))
 	return trace.ContextWithRemoteSpanContext(ctx, spanContext)
 }
 
