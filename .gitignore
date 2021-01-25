@@ -1,5 +1,6 @@
 otel/key.yaml
 consumerGreen/main
 consumerBlue/main
-rush/main
+producer/main
 test.md
+otel/otel_collector.yaml
